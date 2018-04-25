@@ -41,11 +41,12 @@ else
 
 fi
 
-export SPEC=linux_x86-64
+export SPEC=linux_x86-64_cmprssptrs
 
 cd /test/TestConfig
 make -f run_configure.mk
+export BUILD_LIST=functional/Java8andUp
 make compile
-make sanity
+make _sanity
 
 /bin/bash
