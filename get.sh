@@ -20,6 +20,7 @@ SDK_RESOURCE="nightly"
 CUSTOMIZED_SDK_URL=""
 OPENJ9_REPO="https://github.com/eclipse/openj9.git"
 OPENJ9_SHA=""
+SDK_CREDENTIALS=""
 
 usage ()
 {
@@ -62,6 +63,9 @@ parseCommandLineArgs()
 
 			"--openj9_sha" )
 				OPENJ9_SHA="$1"; shift;;
+
+			"--sdk_credentials" )
+				SDK_CREDENTIALS="$1"; shift;;
 
 			"--help" | "-h" )
 				usage; exit 0;;
@@ -130,7 +134,7 @@ getTestKitGenAndFunctionalTestMaterial()
 
 wgetSDK()
 {
-	wget -q --no-check-certificate --header 'Cookie: allow-download=1' ${download_url} --directory-prefix=${SDKDIR}/openjdkbinary
+	wget -q ${SDK_CREDENTIALS} --no-check-certificate --header 'Cookie: allow-download=1' ${download_url} --directory-prefix=${SDKDIR}/openjdkbinary
 	if [ $? -ne 0 ]; then
 		echo "Failed to retrieve the jdk binary, exiting"
 		exit 1
