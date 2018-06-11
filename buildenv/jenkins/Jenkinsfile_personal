@@ -5,7 +5,7 @@ pipeline {
 		string (defaultValue: "https://github.com/AdoptOpenJDK/openjdk-tests.git", description: 'personal repo from AdoptOpenJDK/openjdk-tests', name: 'ADOPTOPENJDK_REPO')
 		string (defaultValue: "master", description: 'personal AdoptOpenJDK branch', name: 'ADOPTOPENJDK_BRANCH')
 		choice (choices: 'linux_x86-64\nlinux_x86-64_cmprssptrs\nmac_x86-64\nlinux_390-64\nlinux_390-64_cmprssptrs\nlinux_ppc-64_le\nlinux_ppc-64_cmprssptrs_le\nlinux_arm\nwin_x86\nwin_x86-64\nwin_x86-64_cmprssptrs\naix_ppc-64\naix_ppc-64_cmprssptrs\nzos_390-64_cmprssptrs', description: 'SPEC?', name: 'SPEC')
-		choice (choices: 'SE80\nSE90\nSE100', description: 'What is JAVA_VERSION?', name: 'JAVA_VERSION')
+		choice (choices: 'SE80\nSE90\nSE100\nSE110', description: 'What is JAVA_VERSION?', name: 'JAVA_VERSION')
 		string (defaultValue: 'openj9', description: 'JAVA_IMPL, e.g. hotspot, openj9, sap', name: 'JAVA_IMPL')
 		string (defaultValue: 'openjdk_regression', description: 'Equivalent to BUILD_LIST, specific test directory to compile, set blank for all projects to be compiled, e.g. openjdk_regression systemtest performance jck thirdparty_containers functional', name: 'TESTPROJECT')
 		string (defaultValue: 'sanity', description: 'Test TARGET to execute, default is runtest which will run all tests. You can also select sub-targets such as:\ndifferent group: openjdk, system, jck, functional, perf, etc\ndifferent level: sanity, extended\nindividual test: jdk_beans_0, jdk_custom, etc', name: 'TARGET')

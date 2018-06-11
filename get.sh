@@ -137,6 +137,16 @@ getTestKitGenAndFunctionalTestMaterial()
 	mv openj9/test/Utils Utils
 	mv openj9/test/functional functional
 	rm -rf openj9
+	
+	# remove folders that does not work
+	rm -rf functional/Java8andUp
+	rm -rf functional/Java9andUp
+	rm -rf functional/Jsr335
+	rm -rf functional/VM_Test
+	rm -rf functional/jvmtitests
+	rm -rf functional/cmdLineTests/jvmtitests
+	rm -rf functional/SharedCPEntryInvokerTests
+
 }
 
 wgetSDK()
