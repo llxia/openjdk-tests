@@ -149,16 +149,17 @@ getBinaryOpenjdk()
 	fi
 	
 	if  [ "${download_url}" != "" ]; then
-		echo "curl -OLJks ${curl_options} "${download_url}""
-		curl -OLJks ${curl_options} "${download_url}"
-		if [ $? -ne 0 ]; then
-			echo "Failed to retrieve the jdk binary, exiting"
-			exit 1
-		fi
+		for file in $download_url
+		do
+			echo "curl -OLJks ${curl_options} $file"
+			#curl -OLJks ${curl_options} $file
+			curl -OLJk -ujtctstsl@ca.ibm.com:APpfBD9TwGZAhx6DJRMWJeha5J $file
+			if [ $? -ne 0 ]; then
+				echo "Failed to retrieve $file, exiting"
+				exit 1
+			fi
+		done
 	fi
-
-	# temporarily remove *test* until upstream build is updated and not staging test material
-	rm -rf *test*
 
 	jar_files=`ls`
 	jar_file_array=(${jar_files//\\n/ })
@@ -174,6 +175,7 @@ getBinaryOpenjdk()
 	
 	jar_dirs=`ls -d */`
 	jar_dir_array=(${jar_dirs//\\n/ })
+
 	for jar_dir in "${jar_dir_array[@]}"
 		do
 			jar_dir_name=${jar_dir%?}
@@ -181,12 +183,14 @@ getBinaryOpenjdk()
 				mv $jar_dir_name j2sdk-image
 			elif [[ "$jar_dir_name" =~ jre*  &&  "$jar_dir_name" != "j2jre-image" ]]; then
 				mv $jar_dir_name j2jre-image
+			# if native test libs folder is available, mv it under native-test-libs
+			elif [[ "$jar_dir_name"  =~ native-test-libs*  &&  "$jar_dir_name" != "native-test-libs" ]]; then
+				mv $jar_dir_name native-test-libs
 			#The following only needed if openj9 has a different image name convention
-			elif [[ "$jar_dir_name" != "j2sdk-image" ]]; then
+			elif [[ "$jar_dir_name" != "j2sdk-image"  &&  "$jar_dir_name" != "native-test-libs" ]]; then
 				mv $jar_dir_name j2sdk-image
 			fi
 		done
-		
 	chmod -R 755 j2sdk-image
 }
 
