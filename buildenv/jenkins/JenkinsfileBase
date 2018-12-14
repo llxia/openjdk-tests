@@ -102,14 +102,64 @@ def setupEnv() {
 	if( params.RELEASE_TAG ) {
 		env.RELEASE_TAG = params.RELEASE_TAG
 	}
+
+	SDK_RESOURCE = params.SDK_RESOURCE ? params.SDK_RESOURCE : "upstream"
+
 	sh 'printenv'
 }
 
 def setupParallelEnv() {
 	stage('setupParallelEnv') {
 		timestamps{
-			cleanWs()
 			setupEnv()
+			def testSubDirs = []
+			def testSubDirSize = 0
+			dir("$WORKSPACE/openjdk-tests/${env.BUILD_LIST}") {
+				testSubDirs = sh(returnStdout: true, script: "ls -d */").trim().tokenize()
+				echo "testSubDirs is ${testSubDirs}"
+				//exclude folders that do not contain playlist.xml
+				def excludeFolders = ["openj9-systemtest/", "openjdk-systemtest/", "stf/"]
+				testSubDirs.removeAll(excludeFolders)
+
+				testSubDirSize = testSubDirs.size()
+			}
+			echo "testSubDirSize is ${testSubDirSize}, testSubDirs is ${testSubDirs}, running test in parallel mode"
+			def parallel_tests = [:]
+			for (int i = 0; i < testSubDirSize; i++) {
+				def testSubDir = testSubDirs[i].trim().replace("/","");
+				def TEST_JOB_NAME = "${JOB_NAME}"
+				echo "************${TEST_JOB_NAME}"
+				parallel_tests[testSubDir] = {
+					build job: TEST_JOB_NAME, parameters: [
+						string(name: 'ADOPTOPENJDK_REPO', value: "${ADOPTOPENJDK_REPO}"),
+						string(name: 'ADOPTOPENJDK_BRANCH', value: "${ADOPTOPENJDK_BRANCH}"),
+						string(name: 'OPENJ9_REPO', value: "${OPENJ9_REPO}"),
+						string(name: 'OPENJ9_BRANCH', value: "${OPENJ9_BRANCH}"),
+						string(name: 'JAVA_VERSION', value: "${JAVA_VERSION}"),
+						string(name: 'JDK_IMPL', value: "${JDK_IMPL}"),
+						string(name: 'BUILD_LIST', value: "${env.BUILD_LIST}/${testSubDir}"),
+						string(name: 'TARGET', value: "${TARGET}"),
+						string(name: 'CUSTOM_TARGET', value: "${CUSTOM_TARGET}"),
+						string(name: 'SDK_RESOURCE', value: "${SDK_RESOURCE}"),
+						string(name: 'CUSTOMIZED_SDK_URL', value: "${CUSTOMIZED_SDK_URL}"),
+						string(name: 'CUSTOMIZED_SDK_URL_CREDENTIAL_ID', value: "${CUSTOMIZED_SDK_URL_CREDENTIAL_ID}"),
+						string(name: 'UPSTREAM_JOB_NAME', value: "${UPSTREAM_JOB_NAME}"),
+						string(name: 'UPSTREAM_JOB_NUMBER', value: "${UPSTREAM_JOB_NUMBER}"),
+						string(name: 'TEST_FLAG', value: "${TEST_FLAG}"),
+						string(name: 'EXTRA_OPTIONS', value: "${EXTRA_OPTIONS}"),
+						string(name: 'JVM_OPTIONS', value: "${JVM_OPTIONS}"),
+						string(name: 'ITERATIONS', value: "${ITERATIONS}"),
+						string(name: 'LABEL', value: "${LABEL}"),
+						string(name: 'JCK_GIT_REPO', value: "${JCK_GIT_REPO}"),
+						string(name: 'SSH_AGENT_CREDENTIAL', value: "${SSH_AGENT_CREDENTIAL}"),
+						string(name: 'KEEP_WORKSPACE', value: "${KEEP_WORKSPACE}"),
+						string(name: 'ARTIFACTORY_SERVER', value: "${ARTIFACTORY_SERVER}"),
+						string(name: 'PERSONAL_BUILD', value: "${PERSONAL_BUILD}"),
+						string(name: 'IS_PARALLEL', value: "false"),
+					]
+				}
+			}
+			parallel parallel_tests
 		}
 	}
 }
@@ -129,8 +179,6 @@ def setup() {
 					deleteDir()
 				}
 			}
-			
-			SDK_RESOURCE = params.SDK_RESOURCE ? params.SDK_RESOURCE : "upstream"
 
 			if (params.CUSTOMIZED_SDK_URL) {
 				SDK_RESOURCE = "customized"
@@ -235,7 +283,8 @@ def buildTest() {
 }
 
 def runTest(subDir) {
-	stage('Test') {
+	def testDir = subDir ? subDir : "Test"
+	stage("${subDir}") {
 		timestamps{
 			echo 'Running tests...'
 			int iterations = 1;
@@ -255,11 +304,11 @@ def runTest(subDir) {
 						).trim()
 						env.DISPLAY = "${DISPLAY}"
 						echo "env.DISPLAY is ${env.DISPLAY}"
-						makeTest("./openjdk-tests/${subDir} _${params.TARGET} ${CUSTOM_OPTION}")
 					}
-				} else {
-					makeTest("./openjdk-tests _${params.TARGET} ${CUSTOM_OPTION}")
 				}
+
+				echo "Call makeTest(./openjdk-tests/${subDir} _${params.TARGET} ${CUSTOM_OPTION})..."
+				makeTest("./openjdk-tests/${subDir} _${params.TARGET} ${CUSTOM_OPTION}")
 			}
 		}
 	}
@@ -313,36 +362,11 @@ def testBuild() {
 			addJobDescription()
 
 			// prepare environment and compile test projects
-			setup()
-			buildTest()
-			if( params.IS_PARALLEL ){
-				// archive compiled test binaries for parallel jobs
-				archiveTestBinaries()
-				def testSubDirs = []
-				def testSubDirSize = 0
-				dir("$WORKSPACE/openjdk-tests/${env.BUILD_LIST}") {
-					testSubDirs = sh(returnStdout: true, script: "ls -d */").trim().split()
-					testSubDirSize = testSubDirs.size()
-				}
-				echo "testSubDirSize is ${testSubDirSize}, testSubDirs is ${testSubDirs}, running test in parallel mode"
-				def parallel_tests = [:]
-				for (int i = 0; i < testSubDirSize; i++) {
-					def testSubDir = testSubDirs[i].trim().replace("/","");
-					parallel_tests[testSubDir] = {
-						node ("$LABEL") {
-							addJobDescription()
-							setupParallelEnv()
-							stageTestBinaries()
-							if( env.BUILD_LIST == "jck") {
-								buildTest()
-							}
-							runTest("${env.BUILD_LIST}/${testSubDir}")
-							post("${env.BUILD_LIST}-${testSubDir}")
-						}
-					}
-				}
-				parallel parallel_tests
+			if( params.IS_PARALLEL == true ){
+				setupParallelEnv()
 			} else {
+				setup()
+				buildTest()
 				echo "running test in default mode"
 				runTest("${env.BUILD_LIST}")
 				post("${env.BUILD_LIST}")

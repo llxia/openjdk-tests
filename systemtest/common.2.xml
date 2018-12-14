@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<project name="systemtest_common" default="build" basedir=".">
+	<taskdef resource="net/sf/antcontrib/antlib.xml" />
+	<description>Build STF based System Tests </description>
+
+	<!-- set global properties for this build -->
+	<property name="SYSTEMTEST_ROOT" value="${TEST_ROOT}/systemtest" />
+	<property name="DEST" value="${BUILD_ROOT}/systemtest" />
+	<property environment="env" />
+	<property name="env.JAVA_HOME" value="${JAVA_BIN}/.." />
+
+					
+	<target name="dist" description="generate the distribution">
+		<copy todir="${DEST}">
+			<fileset dir="${basedir}/../" includes="**" />
+		</copy>
+	</target>
+
+	
+	<target name="build" depends="dist">
+		<echo message="target build is called....." />
+		<echo message="basedir: ${basedir}....." />
+		<echo message="dist DEST: ${DEST}....." />
+		<echo>${user.dir}</echo>
+	</target>
+		
+	<target name="clean">
+	</target>
+</project>
