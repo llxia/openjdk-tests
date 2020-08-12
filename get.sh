@@ -286,6 +286,10 @@ getBinaryOpenjdk()
 		done
 	fi
 
+	echo "Testing... pwd"
+	pwd
+	echo "Testing... ls"
+	ls
 	jar_files=`ls`
 	jar_file_array=(${jar_files//\\n/ })
 
@@ -312,6 +316,7 @@ getBinaryOpenjdk()
 
 	for jar_name in "${jar_file_array[@]}"
 		do
+			echo "Testing... jar_name $jar_name"
 			# if jar_name contains debug-image, extract into j2sdk-image/jre or j2sdk-image dir
 			# Otherwise, files will be extracted under ./tmp
 			if [[ "$jar_name"  =~ "debug-image" || "$jar_name"  =~ "debugimage" ]]; then
