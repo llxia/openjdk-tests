@@ -29,7 +29,7 @@
 		<mkdir dir="${DEST}"/>
 		<if>
 			<not>
-				<available file="jtreg-4.2.0-tip.tar" />
+				<available file="jtreg-5.1-b01.tar" />
 			</not>
 			<then>
 				<if> <available file="custom_jtreg.tar.gz"/>
@@ -38,14 +38,14 @@
 							<copy file="custom_jtreg.tar.gz" tofile="jtreg-4.2.0-tip.tar.gz"/>
 					</then>
 				<else>
-					<echo message="Getting Jtreg from https://ci.adoptopenjdk.net/job/jtreg/lastSuccessfulBuild/artifact/jtreg-4.2.0-tip.tar.gz"/>
+					<echo message="Getting Jtreg from https://ci.adoptopenjdk.net/job/jtreg/lastSuccessfulBuild/artifact/jtreg-5.1-b01.tar.gz"/>
 					<exec executable="curl" failonerror="true">
-						<arg line="--retry 5 -OLJSks https://ci.adoptopenjdk.net/job/jtreg/lastSuccessfulBuild/artifact/jtreg-4.2.0-tip.tar.gz" />
+						<arg line="--retry 5 -OLJSks https://ci.adoptopenjdk.net/job/jtreg/lastSuccessfulBuild/artifact/jtreg-5.1-b01.tar.gz" />
 					</exec>
 				</else>
 				</if>
 				<exec executable="gzip" failonerror="true">
-					<arg line="-d jtreg-4.2.0-tip.tar.gz" />
+					<arg line="-d jtreg-5.1-b01.tar.gz" />
 				</exec>
 			</then>
 		</if>
@@ -53,12 +53,12 @@
 			<contains string="${SPEC}" substring="zos" />
 			<then>
 				<exec executable="tar" failonerror="true">
-					<arg line="xfo jtreg-4.2.0-tip.tar -C ${DEST}" />
+					<arg line="xfo jtreg-5.1-b01.tar -C ${DEST}" />
 				</exec>
 			</then>
 		<else>
 			<exec executable="tar" failonerror="true">
-				<arg line="xf jtreg-4.2.0-tip.tar -C ${DEST}" />
+				<arg line="xf jtreg-5.1-b01.tar -C ${DEST}" />
 			</exec>
 		</else>
 		</if>
