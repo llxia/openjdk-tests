@@ -247,29 +247,6 @@ if (JDK_VERSIONS.size() > 1 || JDK_IMPLS.size() > 1 || PLATFORMS.size() >1 || PL
                         echo "find the node with label as ${env.NODE_NAME}"
                     }
                 }
-            } else {
-                // IF no nodes are idle we will check if there is supported virtual agent
-                // When Parallel the race condition could happen. Say the number of multiply jobs is larger than the available nodes the query's result may be delayed and wrong
-                // In this case jobs will be fooled to fall back to wait local busy nodes. 
-                if (params.CLOUD_PROVIDER != null && params.CLOUD_PROVIDER in dynamicAgents) {
-                    boolean isNodeIdle = false
-                    node {
-                        for (String onlineNode : onlineNodes) {
-                            def nodeStatus = sh(script: "curl -s ${env.JENKINS_URL}computer/${onlineNode}/api/xml?xpath=/*/idle",
-                                                returnStdout: true,
-                                                returnStatus: false
-                                                ).trim()
-                            if (nodeStatus.contains("true")) {
-                                isNodeIdle = true
-                                break
-                            }
-                        }
-                    }
-                    if (!isNodeIdle) {
-                       LABEL = LABEL.minus("ci.role.test&&")
-                       LABEL += '&&ci.agent.dynamic'
-                    }
-                }
             }
 
             node(LABEL) {

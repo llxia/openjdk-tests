@@ -322,11 +322,11 @@ def getNumMachines(){
 }
 
 def getMachineLimit(){
-	int limit = nodesByLabel(LABEL).size()
+	//int limit = nodesByLabel(LABEL).size()
 	// Set limit for dynamic vm agents to 100
-	if (LABEL.contains('ci.agent.dynamic')) {
+	//if (LABEL.contains('ci.agent.dynamic')) {
 		limit = 100
-	}
+	//}
 	return limit
 }
 
