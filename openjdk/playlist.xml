@@ -128,6 +128,18 @@
 	</test>
 	<test>
 		<testCaseName>hotspot_serviceability</testCaseName>
+		<disables>
+			<disable>
+				<comment>https://github.com/ibmruntimes/openj9-openjdk-jdk/issues/331</comment>
+				<impl>openj9</impl>
+				<version>8</version>
+			</disable>
+			<disable>
+				<comment>https://github.com/ibmruntimes/openj9-openjdk-jdk/issues/331</comment>
+				<impl>ibm</impl>
+				<version>8</version>
+			</disable>
+		</disables>
 		<variations>
 			<variation>Mode150</variation>
 			<variation>Mode650</variation>
@@ -143,8 +155,7 @@
 	$(Q)$(JTREG_HOTSPOT_TEST_DIR):hotspot_serviceability$(Q); \
 	$(TEST_STATUS)</command>
 		<versions>
-			<version>8</version>
-			<version>9</version>
+			<version>8+</version>
 		</versions>
 		<levels>
 			<level>extended</level>
@@ -152,9 +163,6 @@
 		<groups>
 			<group>openjdk</group>
 		</groups>
-		<impls>
-			<impl>hotspot</impl>
-		</impls>
 	</test>
 	<test>
 		<testCaseName>jvm_native_sanity</testCaseName>
