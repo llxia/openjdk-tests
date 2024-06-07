@@ -26,7 +26,8 @@
 			</disable>
 		</disables>
 		<command>ant -f ${BUILD_ROOT}/functional/OpenJcePlusTests/test.xml -DTEST_JAVA=$(Q)$(JAVA_COMMAND)$(Q) launch_test; \
-	$(TEST_STATUS)</command>
+		$(TEST_STATUS); \
+		cp -rf ${BUILD_ROOT}/functional/OpenJcePlusTests $(REPORTDIR)</command>
 		<levels>
 			<level>extended</level>
 		</levels>
