@@ -209,7 +209,7 @@ timestamps{
                         ['LABEL_ADDITION' : "${commonLabel}&&sw.os.rhel.9"]
                     ],
             'aarch64_linux' : [
-                        // no machine available, ibm_git/infrastructure/issues/9721 ['LABEL_ADDITION' : "${commonLabel}&&sw.os.ubuntu.22"],
+                        ['LABEL_ADDITION' : "${commonLabel}&&sw.os.ubuntu.22"],
                         ['LABEL_ADDITION' : "${commonLabel}&&sw.os.rhel.8"],
                         ['LABEL_ADDITION' : "${commonLabel}&&sw.os.rhel.9"]
                     ],
@@ -300,14 +300,6 @@ timestamps{
             // Temporarily exclude CentOS 7 machines for sanity.external pipeline due to docker issue
             if (JOB_NAME.contains ("sanity.external")) {
                 LABEL += "&&!sw.os.cent.7"
-            }
-
-            // JDK23+ isn't supported on machines prior to Mac 11 https://github.com/eclipse-openj9/openj9/issues/19694
-            // assume if JDK_VERSION is set to next, JDK_VERSION is 23+
-            if (params.JDK_IMPL == "openj9" && PLATFORM == "x86-64_mac" && params.JDK_VERSION) {
-                if (!params.JDK_VERSION.isInteger() || params.JDK_VERSION.toInteger() >= 23) {
-                    LABEL += "&&!sw.os.mac.10"
-                }
             }
 
             if (params.DOCKER_REQUIRED) {
@@ -403,8 +395,8 @@ timestamps{
             if (currentBuild.result != 'FAILURE') {
                 env.SETUP_LABEL = params.SETUP_LABEL ?: "ci.role.test"
                 echo "SETUP_LABEL: ${env.SETUP_LABEL}"
-                def rerunTestJobParams = jenkinsfile.runParallelTests()
-                jenkinsfile.triggerRerunJob(rerunTestJobParams)
+                jenkinsfile.run_parallel_tests()
+                jenkinsfile.triggerRerunJob()
             }
         } else {
             assert false : "Cannot find key PLATFORM: ${params.PLATFORM} in PLATFORM_MAP: ${PLATFORM_MAP}."
@@ -468,8 +460,8 @@ def runTest() {
         jenkinsfile = load "${WORKSPACE}/aqa-tests/buildenv/jenkins/JenkinsfileBase"
         if (LABEL.contains('ci.agent.dynamic') && CLOUD_PROVIDER.equals('azure')) {
             //Set dockerimage for azure agent. Fyre has stencil to setup the right environment
-            docker.image('adoptopenjdk/centos7_build_image').pull()
-            docker.image('adoptopenjdk/centos7_build_image').inside {
+            docker.image('adoptopenjdk/centos6_build_image').pull()
+            docker.image('adoptopenjdk/centos6_build_image').inside {
                 jenkinsfile.testBuild()
             }
         } else if (dockerAgentLabel.equals('default') && LABEL.contains('&&sw.tool.docker') && SPEC.equals('linux_riscv64')) {
@@ -507,7 +499,6 @@ def runTest() {
                     errorList.add(".*java.io.IOException: Cannot run program \"nohup\".*");
                     errorList.add(".*unzip: command not found.*");
                     errorList.add(".*ant: command not found.*");
-                    errorList.add(".*ERROR: Cannot delete workspace.*");
 
                     // nightly/weekly builds should not have git clone issue
                     if (!env.JOB_NAME.contains("Grinder") && !env.JOB_NAME.contains("_Personal")) {

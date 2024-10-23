@@ -244,11 +244,6 @@ def setupParallelEnv() {
 					echo "Regenerate parallel list with NUM_MACHINES=${MAX_NUM_MACHINES}."
 					PARALLEL_OPTIONS = PARALLEL_OPTIONS_TEMP + " NUM_MACHINES=${MAX_NUM_MACHINES} TEST_TIME="
 					NUM_LIST = genParallelList(PARALLEL_OPTIONS)
-				} else if (NUM_LIST < 6 && env.JDK_IMPL == "openj9" && (TARGET == "extended.jck" || TARGET == "special.system")) {
-					echo "NUM_LIST value ${NUM_LIST} may not be calculated based on the actual execution time."
-					echo "Regenerate parallel list with NUM_MACHINES=6 for TARGET ${TARGET}."
-					PARALLEL_OPTIONS = PARALLEL_OPTIONS_TEMP + " NUM_MACHINES=6 TEST_TIME="
-					NUM_LIST = genParallelList(PARALLEL_OPTIONS)
 				}
 			} else {
 				PARALLEL_OPTIONS += " TEST_TIME= NUM_MACHINES="
@@ -338,7 +333,7 @@ def genParallelList(PARALLEL_OPTIONS) {
 	if (JDK_IMPL == 'hotspot' && PLATFORM.contains('alpine-linux')) {
 		unsetLLP = "unset LD_LIBRARY_PATH;"
 	}
-	sh "cd ./aqa-tests/TKG; $RESOLVED_MAKE; ${unsetLLP} \$MAKE genParallelList ${PARALLEL_OPTIONS}"
+	sh "cd ./aqa-tests/TKG; ${unsetLLP} make genParallelList ${PARALLEL_OPTIONS}"
 	def parallelList = "aqa-tests/TKG/parallelList.mk"
 	int NUM_LIST = -1
 	if (fileExists("${parallelList}")) {
@@ -427,7 +422,7 @@ def setup() {
 	stage('Setup') {
 		setupEnv()
 		if (params.CUSTOMIZED_SDK_URL) {
-			if (params.SDK_RESOURCE == 'nightly' || params.SDK_RESOURCE == 'releases') {
+			if (params.SDK_RESOURCE == 'nightly') {
 				// remove single quote to allow variables to be set in CUSTOMIZED_SDK_URL
 				CUSTOMIZED_SDK_URL_OPTION = "-c ${params.CUSTOMIZED_SDK_URL}"
 			} else if (!params.SDK_RESOURCE || params.SDK_RESOURCE == 'customized') {
@@ -1076,10 +1071,7 @@ def getCustomUrl() {
 	def jenkinsDomain = getJenkinsDomain()
 	if (jenkinsDomain.contains("hyc-runtimes")) {
 		jenkinsDomain = "openj9-jenkins.osuosl.org"
-	} else if (jenkinsDomain.contains("temurin-compliance")) {
-                jenkinsDomain = "ci.adoptium.net"
-        }
-
+	}
 	def customUrl = "https://${jenkinsDomain}/job/test.getDependency/lastSuccessfulBuild/artifact/"
 	echo "Custom URL: ${customUrl}"
 	return customUrl
@@ -1262,25 +1254,15 @@ def addFailedTestsGrinderLink(paths=""){
 								failedTestCasesInfo = failedTestCasesInfo.substring(0, failedTestCasesInfo.indexOf('Test results:'))
 								failedTestCasesInfo = failedTestCasesInfo.split("\\n").join(" ").replaceAll("TEST: ", "")
 								if (failedtest.startsWith("jdk_")) {
-									if (!jdkFailedTestCaseList.contains(failedTestCasesInfo)) {
-										jdkFailedTestCaseList += "${failedTestCasesInfo} "
-									}									
+									jdkFailedTestCaseList += "${failedTestCasesInfo} "
 								} else if (failedtest.startsWith("jck-runtime") || failedtest.startsWith("jckruntime")) {
-									if (!jckRuntimeFailedTestCaseList.contains(failedTestCasesInfo)) {
-										jckRuntimeFailedTestCaseList += "${failedTestCasesInfo} "
-									}
+									jckRuntimeFailedTestCaseList += "${failedTestCasesInfo} "
 								} else if (failedtest.startsWith("jck-compiler") || failedtest.startsWith("jckcompiler")) {
-									if (!jckCompilerFailedTestCaseList.contains(failedTestCasesInfo)) {
-										jckCompilerFailedTestCaseList += "${failedTestCasesInfo} "
-									}
+									jckCompilerFailedTestCaseList += "${failedTestCasesInfo} "
 								} else if (failedtest.startsWith("jck-devtools") || failedtest.startsWith("jckdevtools")) {
-									if (!jckDevtoolsFailedTestCaseList.contains(failedTestCasesInfo)) {
-										jckDevtoolsFailedTestCaseList += "${failedTestCasesInfo} "
-									}
+									jckDevtoolsFailedTestCaseList += "${failedTestCasesInfo} "
 								} else {
-									if (!hotspotFailedTestCaseList.contains(failedTestCasesInfo)) {
-										hotspotFailedTestCaseList += "${failedTestCasesInfo} "
-									}
+									hotspotFailedTestCaseList += "${failedTestCasesInfo} "
 								}
 							}
 						}
@@ -1360,16 +1342,17 @@ def generateJob (newJobs, childTest, testJobName) {
 		}
 	}
 }
-/* triggerRerunJob() triggers rerun at parent job level. There are two type of rerun builds:
- * - rerun due to failed test(s) - RERUN_ITERATIONS > 0 and list of failed test target(s) (i.e., env.FAILED_TESTS cannot be empty)
- * - rerun due to test job in FAILURE state - RERUN_FAILURE is true and rerunTestJobParams cannot be empty
- * If the JOB_NAME contains _rerun, _testList_ or _iteration_, rerun job will not be triggered at the same level.
-*/
-def triggerRerunJob (rerunTestJobParams) {
-	echo "rerunTestJobParams: ${rerunTestJobParams}"
+
+def triggerRerunJob () {
+	// Trigger rerun at parent job level. If the JOB_NAME contains _rerun or _testList_, it will not trigger rerun job
 	if (!JOB_NAME.contains("_rerun") && !JOB_NAME.contains("_testList_") && !JOB_NAME.contains("_iteration_")) {
+		// generate job to rerun failed tests
 		int rerunIterations = params.RERUN_ITERATIONS ? params.RERUN_ITERATIONS.toInteger() : 0
-		if ((rerunIterations > 0 && env.FAILED_TESTS?.trim()) || (params.RERUN_FAILURE && rerunTestJobParams)) {
+		def needRerun = false
+		if ((rerunIterations > 0 && env.FAILED_TESTS?.trim()) || rerunTestJobParams) {
+			needRerun = true
+		}
+		if (needRerun) {
 			stage('Rerun') {
 				def rerunTestJobs =[:]
 				echo "allocate a node for generating rerun job ..."
@@ -1378,7 +1361,6 @@ def triggerRerunJob (rerunTestJobParams) {
 						def rerunJobName = "${JOB_NAME}_rerun"
 						def newJobs = [:]
 						def childParams = []
-						echo "Generating rerun ${rerunJobName} job for running failed test(s) ..."
 						generateJob(newJobs, rerunJobName, rerunJobName)
 						parallel newJobs
 
@@ -1423,13 +1405,12 @@ def triggerRerunJob (rerunTestJobParams) {
 							build job: rerunJobName, parameters: childParams, propagate: false
 						}
 					}
-					// generate job to rerun FAILURE test build(s)
-					if (params.RERUN_FAILURE && rerunTestJobParams) {
+					// generate job to rerun FAILURE test jobs
+					if (rerunTestJobParams) {
 						def newRerunJobs = [:]
 						rerunTestJobParams.each {
 							name, jobParams ->
 								def rerunJobName = "${name}_rerun"
-								echo "Generating rerun ${rerunJobName} job for running FAILURE test build(s) ..."
 								generateJob(newRerunJobs, rerunJobName, rerunJobName)
 								rerunTestJobs[rerunJobName] = {
 									build job: rerunJobName, parameters: jobParams, propagate: false
@@ -1442,7 +1423,6 @@ def triggerRerunJob (rerunTestJobParams) {
 					}
 				}
 				if (rerunTestJobs) {
-					echo "Triggering rerun jobs in parallel ..."
 					def childJobs = parallel rerunTestJobs
 					archiveChildJobTap(childJobs)
 				}
@@ -1486,6 +1466,7 @@ def archiveChildJobTap(childJobs) {
 					if (!currentBuild.resultIsWorseOrEqualTo(childResult)) {
 						currentBuild.result = childResult;
 					}
+					
 			}
 			def resultSum = parseResultSumFromTaps()
 			checkTestResults(resultSum)
@@ -1501,15 +1482,14 @@ def archiveChildJobTap(childJobs) {
 	}
 }
 
-def runParallelTests() {
-	def rerunTestJobParams = [:]
+def run_parallel_tests() {
 	if (params.PARALLEL && params.PARALLEL != "None" && (NUM_MACHINES > 1 || params.TEST_TIME)) {
 		stage ("Parallel Tests") {
 			def childJobs = parallel parallel_tests
+			rerunTestJobParams = [:]
 			rerunTestJobParams = archiveChildJobTap(childJobs)
 		}
 	}
-	return rerunTestJobParams
 }
 
 def parseResultSumFromTaps() {
